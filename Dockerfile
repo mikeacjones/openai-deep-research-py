@@ -22,8 +22,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY --chown=app:app activities ./activities
 COPY --chown=app:app agents ./agents
 COPY --chown=app:app workflows ./workflows
-COPY --chown=app:app config.py worker.py start_workflow.py README.md ./
+COPY --chown=app:app config.py worker.py app.py start_workflow.py README.md ./
+COPY --chown=app:app ui ./ui
 
 USER app
 
-CMD ["python", "worker.py"]
+CMD ["python", "app.py"]

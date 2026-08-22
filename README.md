@@ -576,7 +576,13 @@ Start the Temporal Dev Server:
 temporal server start-dev
 ```
 
-Run the worker:
+Run the combined browser app, API, and worker:
+
+```bash
+uv run app.py
+```
+
+Then open `http://localhost:8234`. To run only the worker:
 
 ```bash
 uv run worker.py
@@ -605,12 +611,14 @@ export TEMPORAL_API_KEY="..."
 export TEMPORAL_TASK_QUEUE="deep-research"
 export OPENAI_API_KEY="..."
 
-uv run worker.py
+uv run app.py
 ```
 
 The deployment registry injects the three Temporal variables. The OpenAI key
 comes from the AWS Secrets Manager JSON secret
-`tmprl-dem-cld/openai-deep-research-py/openai-credentials`.
+`tmprl-dem-cld/deep-research-python/openai-credentials`. The internal registry
+project ID stays `deep-research-python` to preserve its provisioned Temporal
+namespace and secret; its public route is `openai-deep-research-py`.
 
 ### Container
 
@@ -619,6 +627,7 @@ Build the same worker image used by the registry:
 ```bash
 docker build -t openai-deep-research-py .
 docker run --rm \
+  -p 8234:8234 \
   -e TEMPORAL_ADDRESS \
   -e TEMPORAL_NAMESPACE \
   -e TEMPORAL_API_KEY \
@@ -626,6 +635,9 @@ docker run --rm \
   -e OPENAI_API_KEY \
   openai-deep-research-py
 ```
+
+Open `http://localhost:8234`. The runtime serves `/api/health` and verifies its
+Temporal connection at `/api/ready`.
 
 ### Tests
 
