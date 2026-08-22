@@ -1,5 +1,5 @@
 [project]
-name = "deep-research-python-refactor"
+name = "openai-deep-research-py"
 version = "0.1.0"
 description = "Deployable deep research worker using OpenAI Responses API and Temporal"
 authors = [{ name = "Temporal Technologies Inc", email = "sdk@temporal.io" }]

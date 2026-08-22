@@ -610,21 +610,21 @@ uv run worker.py
 
 The deployment registry injects the three Temporal variables. The OpenAI key
 comes from the AWS Secrets Manager JSON secret
-`tmprl-dem-cld/deep-research-python/openai-credentials`.
+`tmprl-dem-cld/openai-deep-research-py/openai-credentials`.
 
 ### Container
 
 Build the same worker image used by the registry:
 
 ```bash
-docker build -t deep-research-python-refactor .
+docker build -t openai-deep-research-py .
 docker run --rm \
   -e TEMPORAL_ADDRESS \
   -e TEMPORAL_NAMESPACE \
   -e TEMPORAL_API_KEY \
   -e TEMPORAL_TASK_QUEUE \
   -e OPENAI_API_KEY \
-  deep-research-python-refactor
+  openai-deep-research-py
 ```
 
 ### Tests
