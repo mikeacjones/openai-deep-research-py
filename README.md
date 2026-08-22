@@ -609,8 +609,8 @@ uv run worker.py
 ```
 
 The deployment registry injects the three Temporal variables. The OpenAI key
-comes from the AWS Secrets Manager JSON secret referenced by the project
-manifest.
+comes from the AWS Secrets Manager JSON secret
+`tmprl-dem-cld/deep-research-python/openai-credentials`.
 
 ### Container
 

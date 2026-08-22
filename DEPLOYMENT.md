@@ -12,7 +12,8 @@ It requires platform-managed Temporal access and polls the task queue in
 `TEMPORAL_TASK_QUEUE` (default: `deep-research`).
 
 The worker also requires `OPENAI_API_KEY`. Store it in the AWS Secrets Manager
-JSON secret selected by the registry project manifest; do not commit it here.
+JSON secret `tmprl-dem-cld/deep-research-python/openai-credentials`; do not
+commit it here.
 
 The supported runtime variables are:
 
@@ -31,9 +32,9 @@ For local and non-registry deployment, `TEMPORAL_TLS`, `TEMPORAL_TLS_CERT`, and
 
 1. Publish this repository as
    `https://github.com/temporal-sa/deep-research-python-refactor`.
-2. Create the OpenAI JSON secret named by the project manifest with an
-   `OPENAI_API_KEY` property.
-3. Add the project manifest under `projects/demo/` in the registry.
+2. Create `tmprl-dem-cld/deep-research-python/openai-credentials` as a JSON
+   secret with an `OPENAI_API_KEY` property.
+3. Add `projects/demo/deep-research-python.yaml` to the registry.
 4. Run the registry validator:
 
    ```bash
