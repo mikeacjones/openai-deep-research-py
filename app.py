@@ -79,7 +79,56 @@ def _status_name(status: WorkflowExecutionStatus | None) -> str:
         return "completed"
     if status == WorkflowExecutionStatus.CANCELED:
         return "cancelled"
+    if status in {
+        WorkflowExecutionStatus.FAILED,
+        WorkflowExecutionStatus.TERMINATED,
+        WorkflowExecutionStatus.TIMED_OUT,
+    }:
+        return "failed"
     return status.name.lower() if status else "researching"
+
+
+def _interaction_payload(
+    workflow_id: str,
+    status: str,
+    *,
+    original_query: str | None = None,
+) -> dict[str, object]:
+    """Return the interaction shape consumed by the shared TypeScript UI."""
+
+    terminal_failure = status in {"failed", "terminated", "timed_out"}
+    return {
+        "workflow_id": workflow_id,
+        "status": status,
+        "original_query": original_query,
+        "clarification_questions": [],
+        "clarification_responses": {},
+        "current_question": None,
+        "current_question_index": 0,
+        "total_questions": 0,
+        "research_completed": status == "completed",
+        "error_message": (
+            "The research workflow could not complete. Open the Temporal "
+            "workflow for failure details."
+            if terminal_failure
+            else None
+        ),
+        "failure_stage": "research" if terminal_failure else None,
+    }
+
+
+def _markdown_section(markdown: str, heading: str) -> str:
+    match = re.search(rf"(?ms)^## {re.escape(heading)}\s*\n(.*?)(?=^## |\Z)", markdown)
+    return match.group(1).strip() if match else ""
+
+
+def _follow_up_questions(markdown: str) -> list[str]:
+    section = _markdown_section(markdown, "Recommended Follow-up Questions")
+    return [
+        match.group(1).strip()
+        for line in section.splitlines()
+        if (match := re.match(r"^[•*-]\s+(.+)$", line.strip()))
+    ]
 
 
 @web.middleware
@@ -129,6 +178,9 @@ def create_web_app(
 
     async def index(_request: web.Request) -> web.StreamResponse:
         return web.FileResponse(root / "index.html")
+
+    async def success(_request: web.Request) -> web.StreamResponse:
+        return web.FileResponse(root / "success.html")
 
     async def health(_request: web.Request) -> web.StreamResponse:
         return web.json_response(
@@ -184,12 +236,17 @@ def create_web_app(
             query,
             id=workflow_id,
             task_queue=settings.task_queue,
+            memo={"original_query": query},
+        )
+        interaction = _interaction_payload(
+            workflow_id, "researching", original_query=query
         )
         return web.json_response(
             {
                 "workflow_id": workflow_id,
-                "status": "researching",
+                "status": "started",
                 "temporal_ui_url": temporal_ui_url(settings, workflow_id),
+                "interaction": interaction,
             },
             status=201,
         )
@@ -198,10 +255,15 @@ def create_web_app(
         workflow_id = _workflow_id(request)
         handle = client.get_workflow_handle(workflow_id, result_type=str)
         description = await handle.describe()
+        original_query = await description.memo_value(
+            "original_query", None, type_hint=str
+        )
+        status = _status_name(description.status)
         return web.json_response(
             {
-                "workflow_id": workflow_id,
-                "status": _status_name(description.status),
+                **_interaction_payload(
+                    workflow_id, status, original_query=original_query
+                ),
                 "temporal_ui_url": temporal_ui_url(settings, workflow_id),
             }
         )
@@ -213,11 +275,18 @@ def create_web_app(
         if description.status != WorkflowExecutionStatus.COMPLETED:
             raise ApiError(409, "Research result is not available yet")
         result = await handle.result()
+        executive_summary = _markdown_section(result, "Executive Summary")
         return web.json_response(
             {
                 "workflow_id": workflow_id,
                 "status": "completed",
                 "report": result,
+                "error_message": None,
+                "markdown_report": result,
+                "short_summary": executive_summary,
+                "follow_up_questions": _follow_up_questions(result),
+                "image_file_path": None,
+                "pdf_file_path": None,
             }
         )
 
@@ -232,12 +301,14 @@ def create_web_app(
 
     app = web.Application(middlewares=[error_middleware], client_max_size=1_048_576)
     app.router.add_get("/", index)
+    app.router.add_get("/success", success)
     app.router.add_get("/api/health", health)
     app.router.add_get("/api/ready", ready)
     app.router.add_post("/api/start-research", start_research)
     app.router.add_get("/api/status/{workflow_id}", research_status)
     app.router.add_get("/api/result/{workflow_id}", research_result)
     app.router.add_post("/api/cancel/{workflow_id}", cancel_research)
+    app.router.add_static("/static", root, show_index=False)
     return app
 
 
