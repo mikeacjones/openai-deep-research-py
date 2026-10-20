@@ -582,7 +582,9 @@ Run the combined browser app, API, and worker:
 uv run app.py
 ```
 
-Then open `http://localhost:8234`. To run only the worker:
+Then open `http://localhost:8234`. To present the demo, follow [RUNBOOK.md](RUNBOOK.md): the walkthrough beat by beat, and where in the code each part happens.
+
+To run only the worker:
 
 ```bash
 uv run worker.py
